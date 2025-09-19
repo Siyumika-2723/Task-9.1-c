@@ -1,10 +1,24 @@
+// Firebase Configuration for Dev@Deakin Authentication App
+// This file sets up the connection to Firebase services for Task 9.1C
+
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getAnalytics } from "firebase/analytics";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
+/**
+ * Firebase Configuration Object
+ * 
+ * These credentials connect our Dev@Deakin app to the Firebase project.
+ * The configuration includes:
+ * - API Key for authentication
+ * - Auth Domain for Firebase Authentication
+ * - Project ID for the specific Firebase project
+ * - Storage Bucket for file storage (if needed in future)
+ * - Messaging Sender ID for push notifications (if needed in future)
+ * - App ID for this specific web application
+ * - Measurement ID for Google Analytics tracking
+ */
+const firebaseProjectConfiguration = {
   apiKey: "AIzaSyCu3ElqJATDPHpdpcer1Hu2khGpB3V5hf8",
   authDomain: "devdeakin-c8877.firebaseapp.com",
   projectId: "devdeakin-c8877",
@@ -14,13 +28,28 @@ const firebaseConfig = {
   measurementId: "G-E0MW7VW5EZ"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase App with our configuration
+const firebaseApp = initializeApp(firebaseProjectConfiguration);
 
-// Initialize Firebase Authentication and get a reference to the service
-export const auth = getAuth(app);
+/**
+ * Firebase Authentication Service
+ * 
+ * This is the main authentication service used throughout the app.
+ * It handles:
+ * - User registration with email/password
+ * - User login with email/password
+ * - User sign-out functionality (MAIN REQUIREMENT for Task 9.1C)
+ * - Authentication state monitoring
+ */
+export const authenticationService = getAuth(firebaseApp);
 
-// Initialize Analytics (optional)
-export const analytics = getAnalytics(app);
+/**
+ * Firebase Analytics Service (Optional)
+ * 
+ * This service can track user interactions and app usage.
+ * Useful for understanding how users interact with the Dev@Deakin app.
+ */
+export const analyticsService = getAnalytics(firebaseApp);
 
-export default app;
+// Export the main Firebase app instance
+export default firebaseApp;

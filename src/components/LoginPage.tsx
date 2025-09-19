@@ -1,72 +1,97 @@
 import React, { useState } from 'react';
-import { auth } from '../firebase/firebaseConfig';
+import { authenticationService } from '../firebase/firebaseConfig';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import './LoginPage.css';
 
+// Interface for LoginPage component props (currently empty but good practice)
 interface LoginPageProps {}
 
+/**
+ * LoginPage Component - Main authentication interface for Dev@Deakin
+ * 
+ * This component handles:
+ * - User login with email/password
+ * - User registration with email/password
+ * - Sign-out functionality (MAIN REQUIREMENT for Task 9.1C)
+ * - Toggling between login and registration modes
+ * - Real-time authentication state monitoring
+ */
 const LoginPage: React.FC<LoginPageProps> = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLogin, setIsLogin] = useState(true);
-  const [error, setError] = useState('');
-  const [user, setUser] = useState<any>(null);
-  const navigate = useNavigate();
+  // State variables for form management
+  const [userEmail, setUserEmail] = useState(''); // User's email input
+  const [userPassword, setUserPassword] = useState(''); // User's password input
+  const [isLoginMode, setIsLoginMode] = useState(true); // Toggle between login/register
+  const [authenticationError, setAuthenticationError] = useState(''); // Error messages
+  const [currentUser, setCurrentUser] = useState<any>(null); // Currently logged in user
+  const navigate = useNavigate(); // React Router navigation hook
 
-  // Check if user is already logged in
+  /**
+   * Effect hook to monitor authentication state changes
+   * This runs when the component mounts and listens for auth state changes
+   */
   React.useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
-      setUser(currentUser);
+    const unsubscribeFromAuthChanges = authenticationService.onAuthStateChanged((currentUserState) => {
+      setCurrentUser(currentUserState);
     });
-    return () => unsubscribe();
+    return () => unsubscribeFromAuthChanges(); // Cleanup subscription on unmount
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  /**
+   * Handles form submission for both login and registration
+   * @param e - Form submit event
+   */
+  const handleAuthenticationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setAuthenticationError(''); // Clear any previous errors
 
     try {
-      if (isLogin) {
-        // Login
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        console.log('User logged in:', userCredential.user);
-        navigate('/dashboard');
+      if (isLoginMode) {
+        // User wants to log in with existing account
+        const userCredential = await signInWithEmailAndPassword(authenticationService, userEmail, userPassword);
+        console.log('User successfully logged in:', userCredential.user);
+        navigate('/dashboard'); // Redirect to dashboard after successful login
       } else {
-        // Register
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        console.log('User registered:', userCredential.user);
-        navigate('/dashboard');
+        // User wants to create a new account
+        const userCredential = await createUserWithEmailAndPassword(authenticationService, userEmail, userPassword);
+        console.log('User successfully registered:', userCredential.user);
+        navigate('/dashboard'); // Redirect to dashboard after successful registration
       }
-    } catch (error: any) {
-      setError(error.message);
-      console.error('Authentication error:', error);
+    } catch (authError: any) {
+      // Handle authentication errors (invalid credentials, weak password, etc.)
+      setAuthenticationError(authError.message);
+      console.error('Authentication error occurred:', authError);
     }
   };
 
-  const handleSignOut = async () => {
+  /**
+   * MAIN REQUIREMENT: Sign-out functionality for Task 9.1C
+   * This function logs out the current user and redirects to login page
+   */
+  const handleUserSignOut = async () => {
     try {
-      await signOut(auth);
-      console.log('User signed out');
-      setUser(null);
-      navigate('/login');
-    } catch (error: any) {
-      console.error('Error signing out:', error);
-      setError(error.message);
+      await signOut(authenticationService);
+      console.log('User successfully signed out');
+      setCurrentUser(null); // Clear current user state
+      navigate('/login'); // Redirect to login page after sign-out
+    } catch (signOutError: any) {
+      console.error('Error occurred during sign-out:', signOutError);
+      setAuthenticationError(signOutError.message);
     }
   };
 
-  if (user) {
-    // User is logged in - show user info and sign out button
+  // If user is already logged in, show the user dashboard with sign-out option
+  if (currentUser) {
     return (
       <div className="login-container">
         <div className="login-form">
           <h2>Welcome to Dev@Deakin</h2>
           <div className="user-info">
-            <p>Logged in as: {user.email}</p>
-            <p>User ID: {user.uid}</p>
+            <p>Logged in as: {currentUser.email}</p>
+            <p>User ID: {currentUser.uid}</p>
           </div>
-          <button onClick={handleSignOut} className="sign-out-btn">
+          {/* MAIN REQUIREMENT: Sign-out button for Task 9.1C */}
+          <button onClick={handleUserSignOut} className="sign-out-btn">
             Sign Out
           </button>
         </div>
@@ -74,52 +99,60 @@ const LoginPage: React.FC<LoginPageProps> = () => {
     );
   }
 
+  // Main login/registration form interface
   return (
     <div className="login-container">
       <div className="login-form">
-        <h2>{isLogin ? 'Login to Dev@Deakin' : 'Register for Dev@Deakin'}</h2>
+        {/* Dynamic title based on current mode (login or register) */}
+        <h2>{isLoginMode ? 'Login to Dev@Deakin' : 'Register for Dev@Deakin'}</h2>
         
-        {error && <div className="error-message">{error}</div>}
+        {/* Display authentication errors to user */}
+        {authenticationError && <div className="error-message">{authenticationError}</div>}
         
-        <form onSubmit={handleSubmit}>
+        {/* Main authentication form */}
+        <form onSubmit={handleAuthenticationSubmit}>
+          {/* Email input field */}
           <div className="form-group">
             <label htmlFor="email">Email:</label>
             <input
               type="email"
               id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={userEmail}
+              onChange={(e) => setUserEmail(e.target.value)}
               required
               placeholder="Enter your email"
             />
           </div>
           
+          {/* Password input field */}
           <div className="form-group">
             <label htmlFor="password">Password:</label>
             <input
               type="password"
               id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={userPassword}
+              onChange={(e) => setUserPassword(e.target.value)}
               required
               placeholder="Enter your password"
               minLength={6}
             />
           </div>
           
+          {/* Submit button with dynamic text */}
           <button type="submit" className="auth-btn">
-            {isLogin ? 'Login' : 'Register'}
+            {isLoginMode ? 'Login' : 'Register'}
           </button>
         </form>
         
+        {/* Toggle between login and registration modes */}
         <p className="toggle-auth">
-          {isLogin ? "Don't have an account? " : "Already have an account? "}
+          {isLoginMode ? "Don't have an account? " : "Already have an account? "}
           <button
             type="button"
-            onClick={() => setIsLogin(!isLogin)}
+            onClick={() => setIsLoginMode(!isLoginMode)}
             className="toggle-btn"
           >
-            {isLogin ? 'Register here' : 'Login here'}
+            {isLoginMode ? 'Register here' : 'Login here'}
           </button>
         </p>
       </div>
